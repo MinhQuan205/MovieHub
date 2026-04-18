@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Build
+dist/
+build/
+android/app/build/
+ios/build/
+ios/Pods/
+
+# Env — KHÔNG BAO GIỜ COMMIT
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
+
+# Testing
+coverage/
+
+# React Native
+*.keystore
+!debug.keystore
+.gradle/
+
+# Project docs — không cần commit những file này
+MOVIEHUB_PROJECT_GUIDE (1).md
+Movie-App.md
