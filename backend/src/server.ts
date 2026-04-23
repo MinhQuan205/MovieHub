@@ -1,6 +1,6 @@
 import app from './app'
 import { config } from './config'
-import { connectDatabase } from './config/database'
+import { connectDatabase, disconnectDatabase } from './config/database'
 import { connectRedis, disconnectRedis } from './config/redis'
 
 let server: ReturnType<typeof app.listen> | null = null
@@ -19,6 +19,7 @@ async function shutdown(signal: NodeJS.Signals): Promise<void> {
   }
 
   await disconnectRedis()
+  await disconnectDatabase()
   process.exit(0)
 }
 
@@ -41,6 +42,6 @@ process.on('SIGTERM', () => {
 
 bootstrap().catch((err) => {
   console.error('Failed to start server:', err)
-  void disconnectRedis()
+  void Promise.all([disconnectRedis(), disconnectDatabase()])
   process.exit(1)
 })

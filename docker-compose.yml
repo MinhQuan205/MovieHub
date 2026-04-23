@@ -12,12 +12,17 @@ services:
     environment:
       NODE_ENV: development
       PORT: 4000
-      MONGODB_URL: mongodb://mongo:27017/moviehub_dev
+      MONGODB_URI: mongodb://mongo:27017/moviehub_dev
       REDIS_URL: redis://redis:6379
       API_PREFIX: /api/v1
+      CORS_ORIGIN: http://localhost:8081,http://localhost:19006
       HEALTH_STRICT_READINESS: "false"
+      DATABASE_CONNECT_RETRIES: "5"
+      DATABASE_CONNECT_RETRY_DELAY_MS: "2000"
       RATE_LIMIT_WINDOW_SECONDS: "60"
       RATE_LIMIT_MAX_REQUESTS: "100"
+      AUTH_RATE_LIMIT_WINDOW_SECONDS: "60"
+      AUTH_RATE_LIMIT_MAX_REQUESTS: "10"
       JWT_ACCESS_SECRET: moviehub_access_secret_dev_123456
       JWT_REFRESH_SECRET: moviehub_refresh_secret_dev_123456
       JWT_ACCESS_EXPIRES: 15m

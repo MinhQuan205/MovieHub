@@ -3,9 +3,15 @@ import request from 'supertest'
 
 jest.mock('../config/index', () => ({
   config: {
+    apiPrefix: '/api/v1',
+    health: {
+      strictReadiness: false,
+    },
     rateLimit: {
       windowSeconds: 60,
       maxRequests: 2,
+      authWindowSeconds: 60,
+      authMaxRequests: 1,
     },
   },
 }))
@@ -75,5 +81,21 @@ describe('rate limit integration', () => {
     expect(response.body.success).toBe(false)
     expect(response.body.error.code).toBe('TOO_MANY_REQUESTS')
     expect(response.headers['retry-after']).toBe('30')
+  })
+
+  it('uses stricter bucket for auth routes', async () => {
+    mockClient.incr.mockResolvedValue(2)
+
+    const app = express()
+    app.use(rateLimitMiddleware)
+    app.post('/api/v1/auth/login', (_req, res) => {
+      res.status(200).json({ ok: true })
+    })
+
+    const response = await request(app).post('/api/v1/auth/login')
+
+    expect(response.status).toBe(429)
+    expect(mockClient.incr).toHaveBeenCalledWith(expect.stringContaining('rate-limit:auth:'))
+    expect(response.headers['x-ratelimit-limit']).toBe('1')
   })
 })

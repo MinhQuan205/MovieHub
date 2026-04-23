@@ -21,15 +21,22 @@ export async function rateLimitMiddleware(req: Request, res: Response, next: Nex
   }
 
   if (!isRedisConnected()) {
+    if (config.health.strictReadiness) {
+      res.status(503).json(apiResponse.error('DEPENDENCY_UNAVAILABLE', 'Rate limit dependency is unavailable'))
+      return
+    }
+
     next()
     return
   }
 
   try {
     const client = getRedisClient()
-    const windowSeconds = config.rateLimit.windowSeconds
-    const maxRequests = config.rateLimit.maxRequests
-    const key = `rate-limit:${getClientIp(req)}`
+    const isAuthRoute = req.path.startsWith(`${config.apiPrefix}/auth`) || req.path.startsWith('/auth')
+    const windowSeconds = isAuthRoute ? config.rateLimit.authWindowSeconds : config.rateLimit.windowSeconds
+    const maxRequests = isAuthRoute ? config.rateLimit.authMaxRequests : config.rateLimit.maxRequests
+    const bucket = isAuthRoute ? 'auth' : 'general'
+    const key = `rate-limit:${bucket}:${getClientIp(req)}`
 
     const currentCount = await client.incr(key)
 
@@ -53,6 +60,12 @@ export async function rateLimitMiddleware(req: Request, res: Response, next: Nex
     next()
   } catch (err) {
     console.error('Rate limit middleware failed, continuing without rate limiting:', err)
+
+    if (config.health.strictReadiness) {
+      res.status(503).json(apiResponse.error('DEPENDENCY_UNAVAILABLE', 'Rate limit dependency failed'))
+      return
+    }
+
     next()
   }
 }

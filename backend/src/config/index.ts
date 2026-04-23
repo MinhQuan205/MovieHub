@@ -18,10 +18,15 @@ const envSchema = Joi.object({
     'string.pattern.base': 'REDIS_URL must start with redis:// or rediss://',
   }),
   API_PREFIX: Joi.string().pattern(/^\/[a-zA-Z0-9/_-]*$/).default('/api/v1'),
+  CORS_ORIGIN: Joi.string().allow('').default(''),
 
   HEALTH_STRICT_READINESS: Joi.boolean().truthy('true').truthy('1').falsy('false').falsy('0').default(false),
+  DATABASE_CONNECT_RETRIES: Joi.number().integer().min(1).default(5),
+  DATABASE_CONNECT_RETRY_DELAY_MS: Joi.number().integer().min(100).default(2000),
   RATE_LIMIT_WINDOW_SECONDS: Joi.number().integer().min(1).default(60),
   RATE_LIMIT_MAX_REQUESTS: Joi.number().integer().min(1).default(100),
+  AUTH_RATE_LIMIT_WINDOW_SECONDS: Joi.number().integer().min(1).default(60),
+  AUTH_RATE_LIMIT_MAX_REQUESTS: Joi.number().integer().min(1).default(10),
 
   JWT_ACCESS_SECRET: Joi.string().allow('').min(16).messages({
     'string.min': 'JWT_ACCESS_SECRET must be at least 16 characters',
@@ -47,6 +52,9 @@ const envSchema = Joi.object({
     'string.min': 'GOOGLE_CLIENT_SECRET must be at least 16 characters',
   }),
   GOOGLE_CALLBACK_URL: Joi.string().allow('').uri({ scheme: ['http', 'https'] }),
+  SENDGRID_API_KEY: Joi.string().allow(''),
+  EMAIL_FROM: Joi.string().allow('').email(),
+  MOBILE_DEEP_LINK_URL: Joi.string().allow(''),
 }).unknown(true)
 
 const { value: env, error } = envSchema.validate(process.env, {
@@ -61,23 +69,34 @@ if (error) {
 
 const mongoUri = String(env.MONGODB_URL || env.MONGODB_URI || '')
 const redisUrl = String(env.REDIS_URL || '')
+const corsOrigins = String(env.CORS_ORIGIN || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean)
 const jwtAccessSecret = String(env.JWT_ACCESS_SECRET || '')
 const jwtRefreshSecret = String(env.JWT_REFRESH_SECRET || '')
 const tmdbApiKey = String(env.TMDB_API_KEY || '')
 const googleClientId = String(env.GOOGLE_CLIENT_ID || '')
 const googleClientSecret = String(env.GOOGLE_CLIENT_SECRET || '')
 const googleCallbackUrl = String(env.GOOGLE_CALLBACK_URL || '')
+const sendGridApiKey = String(env.SENDGRID_API_KEY || '')
+const emailFrom = String(env.EMAIL_FROM || '')
+const mobileDeepLinkUrl = String(env.MOBILE_DEEP_LINK_URL || '')
 const isStrictEnv = env.NODE_ENV === 'staging' || env.NODE_ENV === 'production'
 const strictReadiness = Boolean(env.HEALTH_STRICT_READINESS) || isStrictEnv
 
 if (isStrictEnv) {
   const missing: string[] = []
 
-  if (!mongoUri) missing.push('MONGODB_URL (or legacy MONGODB_URI)')
+  if (!mongoUri) missing.push('MONGODB_URI (or legacy MONGODB_URL)')
   if (!redisUrl) missing.push('REDIS_URL')
   if (!jwtAccessSecret) missing.push('JWT_ACCESS_SECRET')
   if (!jwtRefreshSecret) missing.push('JWT_REFRESH_SECRET')
   if (!tmdbApiKey) missing.push('TMDB_API_KEY')
+  if (corsOrigins.length === 0) missing.push('CORS_ORIGIN')
+  if (!sendGridApiKey) missing.push('SENDGRID_API_KEY')
+  if (!emailFrom) missing.push('EMAIL_FROM')
+  if (!mobileDeepLinkUrl) missing.push('MOBILE_DEEP_LINK_URL')
 
   if (missing.length > 0) {
     throw new Error(`Environment validation failed in ${String(env.NODE_ENV)}: missing ${missing.join(', ')}`)
@@ -97,14 +116,24 @@ export const config = {
   mongoUri,
   redisUrl,
   apiPrefix: String(env.API_PREFIX),
+  cors: {
+    origins: corsOrigins,
+  },
 
   health: {
     strictReadiness,
   },
 
+  database: {
+    connectRetries: Number(env.DATABASE_CONNECT_RETRIES),
+    connectRetryDelayMs: Number(env.DATABASE_CONNECT_RETRY_DELAY_MS),
+  },
+
   rateLimit: {
     windowSeconds: Number(env.RATE_LIMIT_WINDOW_SECONDS),
     maxRequests: Number(env.RATE_LIMIT_MAX_REQUESTS),
+    authWindowSeconds: Number(env.AUTH_RATE_LIMIT_WINDOW_SECONDS),
+    authMaxRequests: Number(env.AUTH_RATE_LIMIT_MAX_REQUESTS),
   },
 
   jwt: {
@@ -124,5 +153,11 @@ export const config = {
     clientId: googleClientId,
     clientSecret: googleClientSecret,
     callbackUrl: googleCallbackUrl,
+  },
+
+  email: {
+    sendGridApiKey,
+    from: emailFrom,
+    mobileDeepLinkUrl,
   },
 }

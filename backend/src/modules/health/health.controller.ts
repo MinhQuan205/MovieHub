@@ -1,14 +1,17 @@
 import { Request, Response } from 'express'
 import { config } from '../../config'
+import { isDatabaseConnected } from '../../config/database'
 import { apiResponse } from '../../utils/apiResponse'
 import { isRedisConnected } from '../../config/redis'
 
 export function getHealth(req: Request, res: Response): void {
     const redisConnected = isRedisConnected()
+    const mongoConnected = isDatabaseConnected()
     const strictReadiness = config.health.strictReadiness
-    const isReady = !strictReadiness || redisConnected
+    const dependenciesReady = redisConnected && mongoConnected
+    const isReady = !strictReadiness || dependenciesReady
 
-    const status: 'ok' | 'degraded' | 'down' = redisConnected ? 'ok' : strictReadiness ? 'down' : 'degraded'
+    const status: 'ok' | 'degraded' | 'down' = dependenciesReady ? 'ok' : strictReadiness ? 'down' : 'degraded'
     const httpStatus = isReady ? 200 : 503
 
     res.status(httpStatus).json(
@@ -19,6 +22,7 @@ export function getHealth(req: Request, res: Response): void {
                 readiness: isReady ? 'ready' : 'not-ready',
                 timestamp: new Date().toISOString(),
                 dependencies: {
+                    mongodb: mongoConnected ? 'connected' : 'disconnected',
                     redis: redisConnected ? 'connected' : 'disconnected',
                 },
             },

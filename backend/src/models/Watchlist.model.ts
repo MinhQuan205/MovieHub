@@ -22,7 +22,16 @@ const watchlistSchema = new Schema(
     name: { type: String, required: true, trim: true, maxlength: 50 },
     isPublic: { type: Boolean, default: false },
     shareSlug: { type: String, required: true, default: createShareSlug },
-    movies: { type: [movieItemSchema], default: [] },
+    movies: {
+      type: [movieItemSchema],
+      default: [],
+      validate: {
+        validator(movies: Array<{ tmdbId: number }>) {
+          return new Set(movies.map((movie) => movie.tmdbId)).size === movies.length
+        },
+        message: 'movies must not contain duplicate tmdbId values',
+      },
+    },
   },
   { timestamps: true }
 )
