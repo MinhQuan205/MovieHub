@@ -1,0 +1,24 @@
+{
+  "name": "moviehub-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "dev:web": "npm run dev -w apps/web",
+    "dev:mobile": "npm run start -w apps/mobile",
+    "android": "npm run android -w apps/mobile",
+    "build:web": "npm run build -w apps/web",
+    "lint:web": "npm run lint -w apps/web",
+    "lint:mobile": "npm run lint -w apps/mobile",
+    "setup:mobile": "echo Use Node 20 LTS then run: npx react-native@latest init apps/mobile --npm"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.0"
+  }
+}
