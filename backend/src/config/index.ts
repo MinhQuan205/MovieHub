@@ -17,6 +17,15 @@ const envSchema = Joi.object({
   REDIS_URL: Joi.string().allow('').pattern(/^rediss?:\/\//).messages({
     'string.pattern.base': 'REDIS_URL must start with redis:// or rediss://',
   }),
+
+  // Elasticsearch
+  ELASTICSEARCH_URL: Joi.string().allow('').uri({ scheme: ['http', 'https'] }).default('').messages({
+    'string.uri': 'ELASTICSEARCH_URL must be a valid http/https URL',
+  }),
+  ELASTICSEARCH_USERNAME: Joi.string().allow('').default(''),
+  ELASTICSEARCH_PASSWORD: Joi.string().allow('').default(''),
+  ELASTICSEARCH_API_KEY: Joi.string().allow('').default(''),
+
   API_PREFIX: Joi.string().pattern(/^\/[a-zA-Z0-9/_-]*$/).default('/api/v1'),
   CORS_ORIGIN: Joi.string().allow('').default(''),
 
@@ -69,6 +78,10 @@ if (error) {
 
 const mongoUri = String(env.MONGODB_URL || env.MONGODB_URI || '')
 const redisUrl = String(env.REDIS_URL || '')
+const elasticsearchUrl = String(env.ELASTICSEARCH_URL || '')
+const elasticsearchUsername = String(env.ELASTICSEARCH_USERNAME || '')
+const elasticsearchPassword = String(env.ELASTICSEARCH_PASSWORD || '')
+const elasticsearchApiKey = String(env.ELASTICSEARCH_API_KEY || '')
 const corsOrigins = String(env.CORS_ORIGIN || '')
   .split(',')
   .map((origin) => origin.trim())
@@ -159,5 +172,12 @@ export const config = {
     sendGridApiKey,
     from: emailFrom,
     mobileDeepLinkUrl,
+  },
+
+  elasticsearch: {
+    url: elasticsearchUrl,
+    username: elasticsearchUsername,
+    password: elasticsearchPassword,
+    apiKey: elasticsearchApiKey,
   },
 }

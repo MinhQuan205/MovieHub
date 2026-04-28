@@ -13,6 +13,7 @@ import {
 } from './auth.controller'
 import {
 	authTokenParamSchema,
+	authTokenQuerySchema,
 	forgotPasswordSchema,
 	loginSchema,
 	registerSchema,
@@ -26,6 +27,7 @@ router.post('/auth/login', validate(loginSchema), loginController)
 router.get('/auth/me', requireAuth, meController)
 router.post('/auth/logout', requireAuth, logoutController)
 router.post('/auth/refresh', refreshController)
+router.get('/auth/verify-email', validate(authTokenQuerySchema, 'query'), verifyEmailController)
 router.get('/auth/verify-email/:token', validate(authTokenParamSchema, 'params'), verifyEmailController)
 router.post('/auth/forgot-password', validate(forgotPasswordSchema), forgotPasswordController)
 router.post(

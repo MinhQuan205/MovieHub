@@ -36,3 +36,7 @@ export const resetPasswordSchema = Joi.object({
 export const authTokenParamSchema = Joi.object({
   token: Joi.string().trim().min(32).required(),
 })
+
+export const authTokenQuerySchema = Joi.object({
+  token: Joi.string().trim().min(32).required(),
+})

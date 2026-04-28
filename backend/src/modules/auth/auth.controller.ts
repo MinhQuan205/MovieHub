@@ -105,6 +105,28 @@ function getTokenParam(value: string | string[] | undefined): string {
   throw new AppError('Token is required', 400, 'TOKEN_REQUIRED')
 }
 
+function getTokenFromRequest(req: Request): string {
+  const tokenFromParams = getOptionalToken(req.params.token)
+  if (tokenFromParams) {
+    return tokenFromParams
+  }
+
+  const tokenFromQuery = getOptionalToken(req.query.token)
+  if (tokenFromQuery) {
+    return tokenFromQuery
+  }
+
+  throw new AppError('Token is required', 400, 'TOKEN_REQUIRED')
+}
+
+function getOptionalToken(value: unknown): string | null {
+  if (typeof value === 'string' && value.trim()) {
+    return value
+  }
+
+  return null
+}
+
 export const registerController = asyncHandler(async (req: Request, res: Response) => {
   const result = await register(req.body as RegisterInput)
   const data = toAuthSuccessData(result)
@@ -189,7 +211,7 @@ export const meController = asyncHandler(async (req: Request, res: Response) => 
 })
 
 export const verifyEmailController = asyncHandler(async (req: Request, res: Response) => {
-  const token = getTokenParam(req.params.token)
+  const token = getTokenFromRequest(req)
   await verifyEmail(token)
   res.status(200).json(apiResponse.success({}, 'EMAIL_VERIFIED_SUCCESS'))
 })
