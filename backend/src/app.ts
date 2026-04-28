@@ -7,6 +7,8 @@ import { config } from './config'
 import { initPassport } from './config/passport'
 import healthRoutes from './modules/health/health.routes'
 import authRoutes from './modules/auth/auth.routes'
+import moviesRouter from './modules/movies/movies.routes'
+import searchRouter from './modules/search/search.routes'
 import { errorHandler } from './middleware/errorHandler'
 import { requestLogger } from './middleware/requestLogger'
 import { rateLimitMiddleware } from './middleware/rateLimit.middleware'
@@ -31,6 +33,17 @@ app.use(rateLimitMiddleware)
 
 app.use(config.apiPrefix, healthRoutes)
 app.use(config.apiPrefix, authRoutes)
+
+// Movies module — mounted at three prefixes:
+//   /api/v1/movies/*   → list endpoints & detail
+//   /api/v1/genres     → genre list
+//   /api/v1/discover   → discover with filters
+app.use(config.apiPrefix, moviesRouter)
+
+// Search module — /api/v1/search, /api/v1/search/suggestions
+// ⚠ No cacheMiddleware — search results are never cached (guide §5.2)
+app.use(config.apiPrefix, searchRouter)
+
 app.use(notFoundHandler)
 app.use(errorHandler)
 

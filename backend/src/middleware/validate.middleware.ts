@@ -24,7 +24,21 @@ export function validate(
       return
     }
 
-    ;(req as unknown as Record<RequestSource, unknown>)[source] = value
+    if (source === 'body') {
+      ;(req as unknown as { body: unknown }).body = value
+      next()
+      return
+    }
+
+    const target = req[source] as Record<string, unknown>
+    for (const key of Object.keys(target)) {
+      delete target[key]
+    }
+
+    if (value && typeof value === 'object') {
+      Object.assign(target, value as Record<string, unknown>)
+    }
+
     next()
   }
 }

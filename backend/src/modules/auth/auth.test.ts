@@ -257,4 +257,36 @@ describe('auth integration flow', () => {
 
     expect(meAfterLogoutResponse.status).toBe(401)
   })
+
+  it('verifies email through query token endpoint used by email links', async () => {
+    const app = createTestApp()
+
+    const registerResponse = await request(app).post('/api/v1/auth/register').send({
+      email: 'query-verify@example.com',
+      password: 'Password123',
+      displayName: 'Query Verify User',
+    })
+
+    expect(registerResponse.status).toBe(201)
+    expect(verificationToken).toBeTruthy()
+
+    const verifyResponse = await request(app).get('/api/v1/auth/verify-email').query({ token: verificationToken })
+
+    expect(verifyResponse.status).toBe(200)
+    expect(verifyResponse.body.success).toBe(true)
+
+    const loginResponse = await request(app).post('/api/v1/auth/login').send({
+      email: 'query-verify@example.com',
+      password: 'Password123',
+    })
+
+    const accessToken = String(loginResponse.body.data.accessToken)
+
+    const meResponse = await request(app)
+      .get('/api/v1/auth/me')
+      .set('Authorization', `Bearer ${accessToken}`)
+
+    expect(meResponse.status).toBe(200)
+    expect(meResponse.body.data.user.isEmailVerified).toBe(true)
+  })
 })

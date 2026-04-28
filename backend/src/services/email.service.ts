@@ -33,7 +33,7 @@ async function sendEmail(to: string, subject: string, html: string): Promise<voi
 
 export async function sendVerificationEmail(email: string, token: string): Promise<void> {
   const { baseUrl } = ensureEmailConfig()
-  const verificationLink = buildLink(baseUrl, '/verify-email', token)
+  const verificationLink = buildLink(baseUrl, '/auth/verify-email', token)
 
   await sendEmail(
     email,
