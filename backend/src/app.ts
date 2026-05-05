@@ -9,6 +9,9 @@ import healthRoutes from './modules/health/health.routes'
 import authRoutes from './modules/auth/auth.routes'
 import moviesRouter from './modules/movies/movies.routes'
 import searchRouter from './modules/search/search.routes'
+import watchlistRouter from './modules/watchlist/watchlist.routes'
+import reviewsRouter from './modules/reviews/reviews.routes'
+import usersRouter from './modules/users/users.routes'
 import { errorHandler } from './middleware/errorHandler'
 import { requestLogger } from './middleware/requestLogger'
 import { rateLimitMiddleware } from './middleware/rateLimit.middleware'
@@ -33,6 +36,7 @@ app.use(rateLimitMiddleware)
 
 app.use(config.apiPrefix, healthRoutes)
 app.use(config.apiPrefix, authRoutes)
+app.use('/api/users', usersRouter)
 
 // Movies module — mounted at three prefixes:
 //   /api/v1/movies/*   → list endpoints & detail
@@ -43,6 +47,12 @@ app.use(config.apiPrefix, moviesRouter)
 // Search module — /api/v1/search, /api/v1/search/suggestions
 // ⚠ No cacheMiddleware — search results are never cached (guide §5.2)
 app.use(config.apiPrefix, searchRouter)
+
+// Watchlist module — /api/v1/watchlists/*  (all routes require JWT)
+app.use(config.apiPrefix, watchlistRouter)
+
+// Reviews module — /api/v1/movies/:id/reviews, /api/v1/reviews/:id
+app.use(config.apiPrefix, reviewsRouter)
 
 app.use(notFoundHandler)
 app.use(errorHandler)

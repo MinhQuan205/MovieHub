@@ -2,12 +2,10 @@ import { Schema, model, models } from 'mongoose'
 
 const reviewSchema = new Schema(
   {
-    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    tmdbMovieId: { type: Number, required: true },
-    tmdbTitle: { type: String, required: true, trim: true, maxlength: 300 },
+    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    tmdbMovieId: { type: Number, required: true, index: true },
     rating: { type: Number, required: true, min: 1, max: 10 },
-    content: { type: String, required: true, trim: true, maxlength: 2000 },
-    containsSpoiler: { type: Boolean, default: false },
+    content: { type: String, trim: true, maxlength: 2000, default: '' },
     likes: {
       type: [Schema.Types.ObjectId],
       ref: 'User',
