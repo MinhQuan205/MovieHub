@@ -64,6 +64,11 @@ const envSchema = Joi.object({
   SENDGRID_API_KEY: Joi.string().allow(''),
   EMAIL_FROM: Joi.string().allow('').email(),
   MOBILE_DEEP_LINK_URL: Joi.string().allow(''),
+
+  AWS_REGION: Joi.string().allow('').default(''),
+  AWS_DEFAULT_REGION: Joi.string().allow('').default(''),
+  AWS_S3_BUCKET: Joi.string().allow('').default(''),
+  AWS_S3_PUBLIC_BASE_URL: Joi.string().allow('').uri({ scheme: ['http', 'https'] }).default(''),
 }).unknown(true)
 
 const { value: env, error } = envSchema.validate(process.env, {
@@ -95,6 +100,9 @@ const googleCallbackUrl = String(env.GOOGLE_CALLBACK_URL || '')
 const sendGridApiKey = String(env.SENDGRID_API_KEY || '')
 const emailFrom = String(env.EMAIL_FROM || '')
 const mobileDeepLinkUrl = String(env.MOBILE_DEEP_LINK_URL || '')
+const awsRegion = String(env.AWS_REGION || env.AWS_DEFAULT_REGION || '')
+const awsS3Bucket = String(env.AWS_S3_BUCKET || '')
+const awsS3PublicBaseUrl = String(env.AWS_S3_PUBLIC_BASE_URL || '')
 const isStrictEnv = env.NODE_ENV === 'staging' || env.NODE_ENV === 'production'
 const strictReadiness = Boolean(env.HEALTH_STRICT_READINESS) || isStrictEnv
 
@@ -110,6 +118,8 @@ if (isStrictEnv) {
   if (!sendGridApiKey) missing.push('SENDGRID_API_KEY')
   if (!emailFrom) missing.push('EMAIL_FROM')
   if (!mobileDeepLinkUrl) missing.push('MOBILE_DEEP_LINK_URL')
+  if (!awsRegion) missing.push('AWS_REGION (or AWS_DEFAULT_REGION)')
+  if (!awsS3Bucket) missing.push('AWS_S3_BUCKET')
 
   if (missing.length > 0) {
     throw new Error(`Environment validation failed in ${String(env.NODE_ENV)}: missing ${missing.join(', ')}`)
@@ -172,6 +182,12 @@ export const config = {
     sendGridApiKey,
     from: emailFrom,
     mobileDeepLinkUrl,
+  },
+
+  s3: {
+    region: awsRegion,
+    bucket: awsS3Bucket,
+    publicBaseUrl: awsS3PublicBaseUrl,
   },
 
   elasticsearch: {

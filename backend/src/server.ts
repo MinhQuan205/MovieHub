@@ -1,10 +1,12 @@
+import { createServer, type Server as HttpServer } from 'node:http'
 import app from './app'
 import { config } from './config'
 import { connectDatabase, disconnectDatabase } from './config/database'
 import { connectRedis, disconnectRedis } from './config/redis'
 import { connectElasticsearch, disconnectElasticsearch } from './config/elasticsearch'
+import { initializeSocketServer } from './sockets/socket.server'
 
-let server: ReturnType<typeof app.listen> | null = null
+let server: HttpServer | null = null
 let shuttingDown = false
 
 async function shutdown(signal: NodeJS.Signals): Promise<void> {
@@ -30,7 +32,10 @@ async function bootstrap() {
   await connectRedis()
   await connectElasticsearch()
 
-  server = app.listen(config.port, () => {
+  server = createServer(app)
+  initializeSocketServer(server)
+
+  server.listen(config.port, () => {
     console.log(`Server is running on http://localhost:${config.port}${config.apiPrefix}/health`)
   })
 }

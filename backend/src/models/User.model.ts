@@ -21,18 +21,18 @@ const userSchema = new Schema(
     passwordHash: {
       type: String,
       minlength: 8,
-      required(this: { provider: 'local' | 'google' }) {
+      required(this: { provider: 'local' | 'google' | 'facebook' }) {
         return this.provider === 'local'
       },
     },
-    displayName: { type: String, required: true, trim: true, minlength: 2, maxlength: 80 },
+    displayName: { type: String, required: true, trim: true, minlength: 2, maxlength: 50 },
     avatar: { type: String, trim: true },
-    provider: { type: String, enum: ['local', 'google'], default: 'local', required: true },
+    provider: { type: String, enum: ['local', 'google', 'facebook'], default: 'local', required: true },
     providerId: {
       type: String,
       trim: true,
-      required(this: { provider: 'local' | 'google' }) {
-        return this.provider === 'google'
+      required(this: { provider: 'local' | 'google' | 'facebook' }) {
+        return this.provider === 'google' || this.provider === 'facebook'
       },
     },
     isEmailVerified: { type: Boolean, default: false },
@@ -58,7 +58,7 @@ userSchema.index(
   {
     unique: true,
     partialFilterExpression: {
-      provider: 'google',
+      provider: { $in: ['google', 'facebook'] },
       providerId: { $exists: true },
     },
   }
