@@ -24,7 +24,6 @@ describe('ReviewModel integration', () => {
     await ReviewModel.create({
       userId,
       tmdbMovieId: 100,
-      tmdbTitle: 'Movie 100',
       rating: 8,
       content: 'Great movie',
     })
@@ -33,7 +32,6 @@ describe('ReviewModel integration', () => {
       ReviewModel.create({
         userId,
         tmdbMovieId: 100,
-        tmdbTitle: 'Movie 100 second review',
         rating: 9,
         content: 'Still great',
       })
@@ -45,7 +43,6 @@ describe('ReviewModel integration', () => {
       ReviewModel.create({
         userId: new mongoose.Types.ObjectId(),
         tmdbMovieId: 101,
-        tmdbTitle: 'Movie 101',
         rating: 11,
         content: 'Out of range',
       })
