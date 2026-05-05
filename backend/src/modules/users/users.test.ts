@@ -1,4 +1,4 @@
-import express from 'express'
+﻿import express from 'express'
 import request from 'supertest'
 
 jest.mock('../../config', () => ({
@@ -23,11 +23,18 @@ jest.mock('../../services/redis.service', () => ({
   },
 }))
 
+jest.mock('../../services/s3.service', () => ({
+  uploadAvatarToS3: jest.fn(async () => 'https://cdn.moviehub.test/avatar.jpg'),
+}))
+
 import usersRoutes from './users.routes'
 import { errorHandler } from '../../middleware/errorHandler'
 import { UserModel } from '../../models/User.model'
 import { clearTestDatabase, connectTestDatabase, disconnectTestDatabase } from '../../models/testDb'
+import { uploadAvatarToS3 } from '../../services/s3.service'
 import { generateAccessToken } from '../../utils/jwt'
+
+const mockedUploadAvatarToS3 = uploadAvatarToS3 as jest.MockedFunction<typeof uploadAvatarToS3>
 
 function createTestApp() {
   const app = express()
@@ -123,5 +130,68 @@ describe('users profile API', () => {
       },
     })
   })
-})
 
+  it('updates avatar after a valid upload', async () => {
+    const app = createTestApp()
+    const authHeader = await createAuthHeader()
+
+    const res = await request(app)
+      .post('/api/users/avatar')
+      .set('Authorization', authHeader)
+      .attach('avatar', Buffer.from([0xff, 0xd8, 0xff, 0x00]), {
+        filename: 'avatar.jpg',
+        contentType: 'image/jpeg',
+      })
+
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({
+      success: true,
+      data: { avatar: 'https://cdn.moviehub.test/avatar.jpg' },
+      message: 'OK',
+    })
+    expect(mockedUploadAvatarToS3).toHaveBeenCalledTimes(1)
+
+    const user = await UserModel.findOne({ email: 'profile@example.com' }).lean()
+    expect(user?.avatar).toBe('https://cdn.moviehub.test/avatar.jpg')
+  })
+
+  it('returns 400 when avatar file is missing', async () => {
+    const app = createTestApp()
+    const authHeader = await createAuthHeader()
+
+    const res = await request(app)
+      .post('/api/users/avatar')
+      .set('Authorization', authHeader)
+
+    expect(res.status).toBe(400)
+    expect(res.body).toEqual({
+      success: false,
+      error: {
+        code: 'AVATAR_FILE_REQUIRED',
+        message: 'Avatar file is required',
+      },
+    })
+  })
+
+  it('returns 400 for unsupported avatar mime type', async () => {
+    const app = createTestApp()
+    const authHeader = await createAuthHeader()
+
+    const res = await request(app)
+      .post('/api/users/avatar')
+      .set('Authorization', authHeader)
+      .attach('avatar', Buffer.from('not an image'), {
+        filename: 'avatar.txt',
+        contentType: 'text/plain',
+      })
+
+    expect(res.status).toBe(400)
+    expect(res.body).toEqual({
+      success: false,
+      error: {
+        code: 'INVALID_AVATAR_TYPE',
+        message: 'Avatar must be a JPEG, PNG, or WebP image',
+      },
+    })
+  })
+})
