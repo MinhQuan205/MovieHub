@@ -1,6 +1,5 @@
 import type { Types } from 'mongoose'
 import { UserModel } from '../../models/User.model'
-import { uploadAvatarToS3 } from '../../services/s3.service'
 import { AppError } from '../../utils/AppError'
 
 type UserProvider = 'local' | 'google' | 'facebook'
@@ -127,27 +126,3 @@ export async function updateProfile(
   return toProfileDto(user)
 }
 
-export async function uploadAvatar(
-  userId: string,
-  file?: Express.Multer.File
-): Promise<{ avatar: string }> {
-  if (!file) {
-    throw new AppError('Avatar file is required', 400, 'AVATAR_FILE_REQUIRED')
-  }
-
-  await findUserProfile(userId)
-
-  const avatar = await uploadAvatarToS3(userId, file)
-
-  const user = await UserModel.findByIdAndUpdate(
-    userId,
-    { $set: { avatar } },
-    { returnDocument: 'after', runValidators: true }
-  ).select('_id')
-
-  if (!user) {
-    throw new AppError('User not found', 404, 'USER_NOT_FOUND')
-  }
-
-  return { avatar }
-}
