@@ -39,5 +39,6 @@ const watchlistSchema = new Schema(
 watchlistSchema.index({ userId: 1 })
 watchlistSchema.index({ shareSlug: 1 }, { unique: true })
 watchlistSchema.index({ userId: 1, 'movies.tmdbId': 1 })
+watchlistSchema.index({ 'movies.tmdbId': 1 }, { sparse: false, background: true })
 
 export const WatchlistModel = models.Watchlist || model('Watchlist', watchlistSchema)

@@ -3,6 +3,8 @@ import type {
   TMDBMovieList,
   TMDBMovieDetail,
   TMDBGenre,
+  TMDBPerson,
+  TMDBPersonCredits,
 } from '@shared/types/movie.types'
 
 // ─────────────────────────────────────────────────────────────
@@ -68,6 +70,20 @@ export class MoviesService {
    */
   async getMovieDetail(id: number): Promise<TMDBMovieDetail> {
     return tmdbService.getMovieDetail(id)
+  }
+
+  /**
+   * Fetches full person detail from TMDB.
+   */
+  async getPersonDetail(id: number): Promise<TMDBPerson> {
+    return tmdbService.getPersonDetail(id)
+  }
+
+  /**
+   * Fetches movie credits for a TMDB person.
+   */
+  async getPersonCredits(id: number): Promise<TMDBPersonCredits> {
+    return tmdbService.getPersonCredits(id)
   }
 
   /**

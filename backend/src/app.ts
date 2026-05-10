@@ -12,10 +12,12 @@ import searchRouter from './modules/search/search.routes'
 import watchlistRouter from './modules/watchlist/watchlist.routes'
 import reviewsRouter from './modules/reviews/reviews.routes'
 import usersRouter from './modules/users/users.routes'
+import notificationsRouter from './modules/notifications/notifications.routes'
 import { errorHandler } from './middleware/errorHandler'
 import { requestLogger } from './middleware/requestLogger'
 import { rateLimitMiddleware } from './middleware/rateLimit.middleware'
 import { notFoundHandler } from './middleware/notFound.middleware'
+import { registerQueueDashboard } from './admin/queueDashboard'
 
 const app = express()
 
@@ -53,6 +55,11 @@ app.use(config.apiPrefix, watchlistRouter)
 
 // Reviews module — /api/v1/movies/:id/reviews, /api/v1/reviews/:id
 app.use(config.apiPrefix, reviewsRouter)
+
+// Notifications module — /api/v1/notifications/*
+app.use(config.apiPrefix, notificationsRouter)
+
+registerQueueDashboard(app)
 
 app.use(notFoundHandler)
 app.use(errorHandler)

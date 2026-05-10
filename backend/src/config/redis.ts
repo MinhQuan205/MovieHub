@@ -21,6 +21,9 @@ class RedisRuntime {
       lazyConnect: true,
       maxRetriesPerRequest: null,
       enableReadyCheck: true,
+      // Mandatory namespace prefix — prevents key collisions with BullMQ
+      // (moviehub:bull:) and any other Redis tenants on the same instance.
+      keyPrefix: 'moviehub:cache:',
     })
 
     client.on('connect', () => {
@@ -75,6 +78,8 @@ class RedisRuntime {
         throw err
       }
 
+      this.client.disconnect()
+      this.client = null
       console.warn('Failed to connect Redis in non-production mode, continue without Redis')
     }
   }

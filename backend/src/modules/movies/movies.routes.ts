@@ -8,6 +8,8 @@ import {
   getTopRated,
   getUpcoming,
   getDetail,
+  getPersonCredits,
+  getPersonDetail,
   getSimilar,
   getGenres,
   discover,
@@ -16,6 +18,7 @@ import {
   movieListQuerySchema,
   paginationQuerySchema,
   movieIdParamSchema,
+  personIdParamSchema,
   discoverQuerySchema,
 } from './movies.validation'
 
@@ -30,6 +33,7 @@ const TTL = {
   TOP_RATED: 21_600,     // 6 h   — very stable data
   UPCOMING: 21_600,      // 6 h
   MOVIE_DETAIL: 86_400,  // 24 h  — rarely changes
+  PERSON_DETAIL: 86_400, // 24 h  — rarely changes
   SIMILAR: 86_400,       // 24 h
   GENRES: 604_800,       // 7 d   — static list
   DISCOVER: 3_600,       // 1 h   — parameterised, key = full URL
@@ -109,6 +113,26 @@ router.get(
   validate(movieIdParamSchema, 'params'),
   cacheMiddleware(TTL.MOVIE_DETAIL),
   getDetail
+)
+
+/**
+ * GET /api/persons/:id
+ */
+router.get(
+  '/persons/:id',
+  validate(personIdParamSchema, 'params'),
+  cacheMiddleware(TTL.PERSON_DETAIL),
+  getPersonDetail
+)
+
+/**
+ * GET /api/persons/:id/credits
+ */
+router.get(
+  '/persons/:id/credits',
+  validate(personIdParamSchema, 'params'),
+  cacheMiddleware(TTL.PERSON_DETAIL),
+  getPersonCredits
 )
 
 /**
