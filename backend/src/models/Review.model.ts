@@ -22,7 +22,7 @@ const reviewSchema = new Schema(
   { timestamps: true }
 )
 
-reviewSchema.index({ tmdbMovieId: 1, createdAt: -1 })
-reviewSchema.index({ userId: 1, tmdbMovieId: 1 }, { unique: true })
+reviewSchema.index({ tmdbMovieId: 1, createdAt: -1 }, { background: true })
+reviewSchema.index({ userId: 1, tmdbMovieId: 1 }, { unique: true, background: true })
 
 export const ReviewModel = models.Review || model('Review', reviewSchema)

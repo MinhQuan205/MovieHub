@@ -13,7 +13,7 @@ const notificationSchema = new Schema(
   { timestamps: false }
 )
 
-notificationSchema.index({ userId: 1, createdAt: -1 })
+notificationSchema.index({ userId: 1, createdAt: -1 }, { background: true })
 notificationSchema.index({ createdAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 30 })
 
 export const NotificationModel = models.Notification || model('Notification', notificationSchema)

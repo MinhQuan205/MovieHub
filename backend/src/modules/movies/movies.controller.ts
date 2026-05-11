@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import { asyncHandler } from '../../utils/asyncHandler'
 import { AppError } from '../../utils/AppError'
+import { apiResponse } from '../../utils/apiResponse'
 import { moviesService } from './movies.service'
 import type { TrendingWindow } from './movies.service'
 
@@ -87,6 +88,42 @@ export const getDetail = asyncHandler(async (req: Request, res: Response) => {
 
   const data = await moviesService.getMovieDetail(id)
   res.status(200).json({ success: true, data })
+})
+
+// ─────────────────────────────────────────────────────────────
+// getPersonDetail  GET /persons/:id
+// ─────────────────────────────────────────────────────────────
+
+export const getPersonDetail = asyncHandler(async (req: Request, res: Response) => {
+  const id = parsePositiveInt(req.params['id'], 0, 'id')
+  if (id === 0) {
+    throw new AppError('Person ID is required', 400, 'VALIDATION_ERROR')
+  }
+
+  const data = await moviesService.getPersonDetail(id)
+  if (!data) {
+    throw new AppError('Person not found', 404, 'PERSON_NOT_FOUND')
+  }
+
+  res.status(200).json(apiResponse.success(data, 'PERSON_DETAIL_FETCHED'))
+})
+
+// ─────────────────────────────────────────────────────────────
+// getPersonCredits  GET /persons/:id/credits
+// ─────────────────────────────────────────────────────────────
+
+export const getPersonCredits = asyncHandler(async (req: Request, res: Response) => {
+  const id = parsePositiveInt(req.params['id'], 0, 'id')
+  if (id === 0) {
+    throw new AppError('Person ID is required', 400, 'VALIDATION_ERROR')
+  }
+
+  const data = await moviesService.getPersonCredits(id)
+  if (!data) {
+    throw new AppError('Person not found', 404, 'PERSON_NOT_FOUND')
+  }
+
+  res.status(200).json(apiResponse.success(data, 'PERSON_CREDITS_FETCHED'))
 })
 
 // ─────────────────────────────────────────────────────────────

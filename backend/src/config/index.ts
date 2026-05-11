@@ -69,6 +69,26 @@ const envSchema = Joi.object({
   AWS_DEFAULT_REGION: Joi.string().allow('').default(''),
   AWS_S3_BUCKET: Joi.string().allow('').default(''),
   AWS_S3_PUBLIC_BASE_URL: Joi.string().allow('').uri({ scheme: ['http', 'https'] }).default(''),
+
+  // Firebase Admin — required in production, optional otherwise to support
+  // the graceful-skip pattern for local development and tests.
+  FIREBASE_PROJECT_ID: Joi.when('NODE_ENV', {
+    is: 'production',
+    then: Joi.string().required(),
+    otherwise: Joi.string().allow('').optional().default(''),
+  }),
+  FIREBASE_CLIENT_EMAIL: Joi.when('NODE_ENV', {
+    is: 'production',
+    then: Joi.string().email().required(),
+    otherwise: Joi.string().allow('').email().optional().default(''),
+  }),
+  // The private key is a multiline PEM; in .env files the newlines are stored
+  // as literal '\n' sequences — sanitization happens in firebase.ts.
+  FIREBASE_PRIVATE_KEY: Joi.when('NODE_ENV', {
+    is: 'production',
+    then: Joi.string().required(),
+    otherwise: Joi.string().allow('').optional().default(''),
+  }),
 }).unknown(true)
 
 const { value: env, error } = envSchema.validate(process.env, {
@@ -103,6 +123,9 @@ const mobileDeepLinkUrl = String(env.MOBILE_DEEP_LINK_URL || '')
 const awsRegion = String(env.AWS_REGION || env.AWS_DEFAULT_REGION || '')
 const awsS3Bucket = String(env.AWS_S3_BUCKET || '')
 const awsS3PublicBaseUrl = String(env.AWS_S3_PUBLIC_BASE_URL || '')
+const firebaseProjectId = String(env.FIREBASE_PROJECT_ID || '')
+const firebaseClientEmail = String(env.FIREBASE_CLIENT_EMAIL || '')
+const firebasePrivateKey = String(env.FIREBASE_PRIVATE_KEY || '')
 const isStrictEnv = env.NODE_ENV === 'staging' || env.NODE_ENV === 'production'
 const strictReadiness = Boolean(env.HEALTH_STRICT_READINESS) || isStrictEnv
 
@@ -120,7 +143,6 @@ if (isStrictEnv) {
   if (!mobileDeepLinkUrl) missing.push('MOBILE_DEEP_LINK_URL')
   if (!awsRegion) missing.push('AWS_REGION (or AWS_DEFAULT_REGION)')
   if (!awsS3Bucket) missing.push('AWS_S3_BUCKET')
-
   if (missing.length > 0) {
     throw new Error(`Environment validation failed in ${String(env.NODE_ENV)}: missing ${missing.join(', ')}`)
   }
@@ -195,5 +217,12 @@ export const config = {
     username: elasticsearchUsername,
     password: elasticsearchPassword,
     apiKey: elasticsearchApiKey,
+  },
+
+  firebase: {
+    projectId: firebaseProjectId,
+    clientEmail: firebaseClientEmail,
+    // Raw value — sanitization (\n → newline) is applied in firebase.ts.
+    privateKey: firebasePrivateKey,
   },
 }

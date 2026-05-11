@@ -28,6 +28,10 @@ export const movieIdParamSchema = Joi.object({
   id: Joi.number().integer().positive().required(),
 })
 
+export const personIdParamSchema = Joi.object({
+  id: Joi.number().integer().positive().required(),
+})
+
 // ─────────────────────────────────────────────────────────────
 // Schema 4: Discover query params
 // Used by: discover
