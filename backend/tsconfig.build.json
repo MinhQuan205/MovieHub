@@ -1,0 +1,13 @@
+{
+  // Production build config — extends base tsconfig but strips jest types
+  // Used by: npm run build → tsc -p tsconfig.build.json
+  // This prevents TS2688 "Cannot find type definition file for 'jest'" in CI/CD
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "sourceMap": false,
+    "declaration": false,
+    "declarationMap": false
+  },
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
+}

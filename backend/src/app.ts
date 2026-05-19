@@ -3,6 +3,10 @@ import cors from 'cors'
 import helmet from 'helmet'
 import compression from 'compression'
 import passport from 'passport'
+import path from 'path'
+import fs from 'fs'
+import yaml from 'js-yaml'
+import swaggerUi from 'swagger-ui-express'
 import { config } from './config'
 import { initPassport } from './config/passport'
 import healthRoutes from './modules/health/health.routes'
@@ -18,6 +22,11 @@ import { requestLogger } from './middleware/requestLogger'
 import { rateLimitMiddleware } from './middleware/rateLimit.middleware'
 import { notFoundHandler } from './middleware/notFound.middleware'
 import { registerQueueDashboard } from './admin/queueDashboard'
+
+// Load swagger.yaml from project root (backend/swagger.yaml)
+const swaggerDocument = yaml.load(
+  fs.readFileSync(path.join(__dirname, '..', 'swagger.yaml'), 'utf8')
+) as Record<string, unknown>
 
 const app = express()
 
@@ -60,6 +69,16 @@ app.use(config.apiPrefix, reviewsRouter)
 app.use(config.apiPrefix, notificationsRouter)
 
 registerQueueDashboard(app)
+
+// ── Swagger UI (/api/docs) ────────────────────────────────────────────────────
+app.use(
+  '/api/docs',
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerDocument, {
+    customSiteTitle: 'MovieHub API Docs',
+    swaggerOptions: { persistAuthorization: true },
+  })
+)
 
 app.use(notFoundHandler)
 app.use(errorHandler)

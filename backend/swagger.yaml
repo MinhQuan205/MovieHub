@@ -2,14 +2,28 @@ openapi: 3.0.3
 info:
   title: MovieHub API
   version: 1.0.0
-  description: Auth contract between Backend and Mobile.
+  description: Auth and Core features contract between Backend and Mobile.
 servers:
   - url: /api/v1
 
 tags:
   - name: Auth
     description: Authentication and account lifecycle
-
+  - name: Movies
+    description: TMDB movie queries
+  - name: Persons
+    description: TMDB person/actor queries
+  - name: Search
+    description: Elasticsearch queries
+  - name: Watchlist
+    description: User personal watchlists
+  - name: Reviews
+    description: Movie reviews and ratings
+  - name: Users
+    description: User profile and avatar
+  - name: Notifications
+    description: User notifications and FCM
+ 
 components:
   securitySchemes:
     bearerAuth:
@@ -47,6 +61,8 @@ components:
           format: email
         displayName:
           type: string
+        avatar:
+          type: string
         role:
           type: string
           enum: [user, admin]
@@ -55,6 +71,19 @@ components:
         preferences:
           $ref: '#/components/schemas/UserPreferences'
       required: [id, email, displayName, role, isEmailVerified, preferences]
+    PaginatedResponse:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+        hasNext:
+          type: boolean
     ApiSuccess:
       type: object
       properties:
@@ -65,6 +94,8 @@ components:
           type: object
         message:
           type: string
+        meta:
+          $ref: '#/components/schemas/PaginatedResponse'
       required: [success, data, message]
     ApiError:
       type: object
@@ -82,7 +113,152 @@ components:
           required: [code, message]
       required: [success, error]
 
+    # New Schemas
+    Movie:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        overview:
+          type: string
+        posterPath:
+          type: string
+        backdropPath:
+          type: string
+        voteAverage:
+          type: number
+        releaseDate:
+          type: string
+        genreIds:
+          type: array
+          items:
+            type: integer
+    MovieDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        overview:
+          type: string
+        posterPath:
+          type: string
+        backdropPath:
+          type: string
+        voteAverage:
+          type: number
+        releaseDate:
+          type: string
+        runtime:
+          type: integer
+        genres:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+        credits:
+          type: object
+        videos:
+          type: object
+    Person:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        biography:
+          type: string
+        profilePath:
+          type: string
+        knownForDepartment:
+          type: string
+    WatchlistMovie:
+      type: object
+      properties:
+        tmdbId:
+          type: integer
+        tmdbTitle:
+          type: string
+        posterPath:
+          type: string
+        addedAt:
+          type: string
+          format: date-time
+        note:
+          type: string
+    WatchlistItem:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        isPublic:
+          type: boolean
+        shareSlug:
+          type: string
+        movies:
+          type: array
+          items:
+            $ref: '#/components/schemas/WatchlistMovie'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    Review:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        tmdbMovieId:
+          type: integer
+        tmdbTitle:
+          type: string
+        rating:
+          type: number
+        content:
+          type: string
+        containsSpoiler:
+          type: boolean
+        likesCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        isRead:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
 paths:
+  # ---------------- AUTH ----------------
   /auth/register:
     post:
       tags: [Auth]
@@ -210,7 +386,6 @@ paths:
     post:
       tags: [Auth]
       summary: Logout and revoke current access token + refresh session
-      description: Requires Bearer access token and will also clear refreshToken cookie.
       security:
         - bearerAuth: []
         - refreshCookieAuth: []
@@ -221,12 +396,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiSuccess'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
 
   /auth/refresh:
     post:
@@ -239,19 +408,12 @@ paths:
           description: Token refresh success
           headers:
             Set-Cookie:
-              description: Sets rotated HttpOnly refreshToken cookie
               schema:
                 type: string
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiSuccess'
-        '401':
-          description: Invalid or missing refresh token
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
 
   /auth/verify-email/{token}:
     get:
@@ -270,18 +432,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiSuccess'
-        '400':
-          description: Token invalid or expired
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
 
   /auth/forgot-password:
     post:
       tags: [Auth]
       summary: Request reset password link
-      description: Always returns generic success message to avoid email enumeration.
       requestBody:
         required: true
         content:
@@ -329,9 +484,766 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiSuccess'
-        '400':
-          description: Token invalid or expired
+
+  # ---------------- MOVIES ----------------
+  /movies/trending:
+    get:
+      tags: [Movies]
+      summary: Get trending movies
+      parameters:
+        - in: query
+          name: window
+          schema:
+            type: string
+            enum: [day, week]
+            default: day
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: List of movies
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiError'
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccess'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          results:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Movie'
+
+  /movies/now-playing:
+    get:
+      tags: [Movies]
+      summary: Get now playing movies
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccess'
+
+  /movies/popular:
+    get:
+      tags: [Movies]
+      summary: Get popular movies
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccess'
+
+  /movies/top-rated:
+    get:
+      tags: [Movies]
+      summary: Get top rated movies
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccess'
+
+  /movies/upcoming:
+    get:
+      tags: [Movies]
+      summary: Get upcoming movies
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccess'
+
+  /movies/{id}:
+    get:
+      tags: [Movies]
+      summary: Get movie details with credits/videos
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccess'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/MovieDetail'
+
+  /movies/{id}/similar:
+    get:
+      tags: [Movies]
+      summary: Get similar movies
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccess'
+
+  /genres:
+    get:
+      tags: [Movies]
+      summary: Get movie genres list
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccess'
+
+  /discover:
+    get:
+      tags: [Movies]
+      summary: Discover and filter movies
+      parameters:
+        - in: query
+          name: genre
+          schema:
+            type: string
+        - in: query
+          name: year
+          schema:
+            type: integer
+        - in: query
+          name: rating
+          schema:
+            type: number
+        - in: query
+          name: sort
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccess'
+
+  # ---------------- PERSONS ----------------
+  /persons/{id}:
+    get:
+      tags: [Persons]
+      summary: Get person details
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccess'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Person'
+
+  /persons/{id}/credits:
+    get:
+      tags: [Persons]
+      summary: Get person credits
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccess'
+
+  # ---------------- SEARCH ----------------
+  /search:
+    get:
+      tags: [Search]
+      summary: Search movies with Elasticsearch
+      parameters:
+        - in: query
+          name: q
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccess'
+
+  /search/suggestions:
+    get:
+      tags: [Search]
+      summary: Autocomplete search suggestions (Top 5)
+      parameters:
+        - in: query
+          name: q
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccess'
+
+  # ---------------- WATCHLIST ----------------
+  /watchlists:
+    get:
+      tags: [Watchlist]
+      summary: Get all watchlists of the user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccess'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/WatchlistItem'
+    post:
+      tags: [Watchlist]
+      summary: Create a new watchlist
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                isPublic:
+                  type: boolean
+              required: [name]
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccess'
+
+  /watchlists/{id}:
+    put:
+      tags: [Watchlist]
+      summary: Update watchlist settings
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                isPublic:
+                  type: boolean
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccess'
+    delete:
+      tags: [Watchlist]
+      summary: Delete a watchlist
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccess'
+
+  /watchlists/{id}/movies:
+    post:
+      tags: [Watchlist]
+      summary: Add movie to watchlist
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tmdbId:
+                  type: integer
+              required: [tmdbId]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccess'
+
+  /watchlists/{id}/movies/{tmdbId}:
+    delete:
+      tags: [Watchlist]
+      summary: Remove movie from watchlist
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: tmdbId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccess'
+
+  # ---------------- REVIEWS ----------------
+  /movies/{id}/reviews:
+    get:
+      tags: [Reviews]
+      summary: Get movie reviews
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccess'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Review'
+    post:
+      tags: [Reviews]
+      summary: Create a review
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rating:
+                  type: number
+                content:
+                  type: string
+                containsSpoiler:
+                  type: boolean
+              required: [rating, content]
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccess'
+
+  /reviews/{id}:
+    put:
+      tags: [Reviews]
+      summary: Update a review
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rating:
+                  type: number
+                content:
+                  type: string
+                containsSpoiler:
+                  type: boolean
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccess'
+    delete:
+      tags: [Reviews]
+      summary: Delete a review
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccess'
+
+  /reviews/{id}/like:
+    post:
+      tags: [Reviews]
+      summary: Toggle like on a review
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccess'
+
+  /reviews/{id}/report:
+    post:
+      tags: [Reviews]
+      summary: Report a review
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+              required: [reason]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccess'
+
+  # ---------------- USERS ----------------
+  /users/profile:
+    get:
+      tags: [Users]
+      summary: Get user profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccess'
+    put:
+      tags: [Users]
+      summary: Update user profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                displayName:
+                  type: string
+                preferences:
+                  $ref: '#/components/schemas/UserPreferences'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccess'
+
+  /users/avatar:
+    post:
+      tags: [Users]
+      summary: Upload user avatar to S3
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+              required: [avatar]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccess'
+
+  # ---------------- NOTIFICATIONS ----------------
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: Get paginated notifications
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccess'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Notification'
+
+  /notifications/{id}/read:
+    put:
+      tags: [Notifications]
+      summary: Mark notification as read
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccess'
+
+  /notifications/read-all:
+    put:
+      tags: [Notifications]
+      summary: Mark all unread notifications as read
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccess'
+
+  /notifications/fcm-token:
+    post:
+      tags: [Notifications]
+      summary: Register FCM device token
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+              required: [token]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccess'
+    delete:
+      tags: [Notifications]
+      summary: Remove FCM device token
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+              required: [token]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccess'

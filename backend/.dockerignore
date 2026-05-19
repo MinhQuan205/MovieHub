@@ -1,0 +1,55 @@
+# Build context = project root → ignore paths relative to root
+
+# Dependencies (sẽ được npm ci cài lại trong image)
+node_modules/
+backend/node_modules/
+
+# TypeScript compiled output
+dist/
+backend/dist/
+
+# Environment files — KHÔNG bao giờ bake secrets vào image
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+!backend/.env.prod.example
+
+# Dev/test artifacts
+coverage/
+backend/coverage/
+**/*.test.ts
+**/*.spec.ts
+backend/jest.config.*
+
+# Logs
+logs/
+*.log
+backend/logs/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Docker files
+backend/Dockerfile*
+backend/.dockerignore
+docker-compose*.yml
+docker/
+
+# k6 load tests (không cần lúc runtime)
+backend/k6/
+
+# Scratch / temp
+backend/generate-swagger.js
+
+# Mobile code (không cần trong backend image)
+mobile/
