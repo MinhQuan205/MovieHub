@@ -1,8 +1,4 @@
-import { errors as EsErrors } from '@elastic/elasticsearch'
-import type {
-  QueryDslQueryContainer,
-  MappingProperty,
-} from '@elastic/elasticsearch/lib/api/types'
+import { errors as EsErrors, type estypes } from '@elastic/elasticsearch'
 import { getElasticsearchClient, isElasticsearchConnected } from '../config/elasticsearch'
 import { AppError } from '../utils/AppError'
 import logger from '../utils/logger'
@@ -81,7 +77,7 @@ interface MovieDocument {
 // Index mapping (declared once, reused by ensureIndex)
 // ─────────────────────────────────────────────────────────────
 
-const MOVIES_MAPPING: Record<string, MappingProperty> = {
+const MOVIES_MAPPING: Record<string, estypes.MappingProperty> = {
   id:                { type: 'integer' },
   title:             { type: 'text',    analyzer: 'standard' },
   original_title:    { type: 'text',    analyzer: 'standard' },
@@ -350,7 +346,7 @@ export class ElasticsearchService {
 
     // ── Build the filter array ─────────────────────────────
 
-    const filterClauses: QueryDslQueryContainer[] = []
+    const filterClauses: estypes.QueryDslQueryContainer[] = []
 
     if (filters.genreIds && filters.genreIds.length > 0) {
       filterClauses.push({ terms: { genre_ids: filters.genreIds } })
@@ -369,7 +365,7 @@ export class ElasticsearchService {
 
     // ── Build the full DSL query ───────────────────────────
 
-    const esQuery: QueryDslQueryContainer =
+    const esQuery: estypes.QueryDslQueryContainer =
       filterClauses.length > 0
         ? {
             bool: {
