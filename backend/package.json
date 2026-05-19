@@ -9,7 +9,7 @@
     "start": "node dist/backend/src/server.js",
     "lint": "eslint . --ext .ts",
     "type-check": "tsc --noEmit",
-    "test": "jest"
+    "test": "jest --runInBand"
   },
   "keywords": [],
   "author": "",

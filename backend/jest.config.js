@@ -33,7 +33,7 @@ module.exports = {
     "!src/**/*.d.ts",
     "!src/server.ts",   // entrypoint — not testable in unit context
   ],
-  coverageThresholds: {
+  coverageThreshold: {
     global: {
       statements: 70,
       branches: 60,

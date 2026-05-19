@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "test": "npm --prefix backend run test"
+  },
   "devDependencies": {
     "@types/compression": "^1.8.1",
     "mongodb-memory-server": "^11.0.1"

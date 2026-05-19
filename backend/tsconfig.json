@@ -8,6 +8,8 @@
     "outDir": "./dist",
     "module": "commonjs",
     "target": "es2022",
+    "moduleResolution": "node",
+    "ignoreDeprecations": "6.0",
     "types": ["node", "jest"],
 
     // Other Outputs
