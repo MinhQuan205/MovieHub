@@ -57,5 +57,5 @@ HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=3 \
   CMD wget -qO- http://localhost:4000/api/v1/health > /dev/null || exit 1
 
 ENTRYPOINT ["dumb-init", "--"]
-# rootDir=".." → backend/src/server.ts → dist/backend/src/server.js
-CMD ["node", "dist/backend/src/server.js"]
+# Build writes a Render-compatible dist/server.js entrypoint.
+CMD ["node", "dist/server.js"]

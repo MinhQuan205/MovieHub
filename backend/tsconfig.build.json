@@ -4,10 +4,13 @@
   // This prevents TS2688 "Cannot find type definition file for 'jest'" in CI/CD
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    "rootDir": "..",
+    "outDir": "./dist",
     "types": ["node"],
     "sourceMap": false,
     "declaration": false,
     "declarationMap": false
   },
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
+  "include": ["src/**/*.ts", "../shared/**/*.ts"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts", "src/models/testDb.ts"]
 }
