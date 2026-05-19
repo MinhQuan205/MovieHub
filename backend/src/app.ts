@@ -23,10 +23,12 @@ import { rateLimitMiddleware } from './middleware/rateLimit.middleware'
 import { notFoundHandler } from './middleware/notFound.middleware'
 import { registerQueueDashboard } from './admin/queueDashboard'
 
-// Load swagger.yaml from project root (backend/swagger.yaml)
-const swaggerDocument = yaml.load(
-  fs.readFileSync(path.join(__dirname, '..', 'swagger.yaml'), 'utf8')
-) as Record<string, unknown>
+// Load swagger.yaml (fallback to process.cwd() for production/dist environment)
+let swaggerPath = path.join(__dirname, '..', 'swagger.yaml')
+if (!fs.existsSync(swaggerPath)) {
+  swaggerPath = path.join(process.cwd(), 'swagger.yaml')
+}
+const swaggerDocument = yaml.load(fs.readFileSync(swaggerPath, 'utf8')) as Record<string, unknown>
 
 const app = express()
 
