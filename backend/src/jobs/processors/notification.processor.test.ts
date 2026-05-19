@@ -16,19 +16,10 @@ import type { Job } from 'bullmq'
 
 const mockSendToUser = jest.fn()
 
-// The class exported from the mock IS the one the processor will use for
-// instanceof checks — jest.mock replaces the entire module, so both the
-// test and the processor see the same constructor reference.
-class FcmPayloadValidationError extends Error {
-  constructor(message: string) {
-    super(message)
-    this.name = 'FcmPayloadValidationError'
-  }
-}
-
 jest.mock('../../services/fcm.service', () => {
-  // Re-use the class defined in the outer scope so instanceof works across
-  // the test ↔ processor boundary.
+  // Define the error class inside the factory so jest.mock hoisting works correctly.
+  // The test imports this same class via ProcessorFcmError (line ~84) to ensure
+  // instanceof checks inside the processor evaluate to true.
   class _FcmPayloadValidationError extends Error {
     constructor(message: string) {
       super(message)
