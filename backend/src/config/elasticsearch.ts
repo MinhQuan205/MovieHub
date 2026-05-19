@@ -80,11 +80,7 @@ export async function connectElasticsearch(): Promise<void> {
   }
 
   if (!config.elasticsearch.url) {
-    if (config.nodeEnv === 'production') {
-      throw new Error('ELASTICSEARCH_URL is required in production environment')
-    }
-
-    logger.warn('ELASTICSEARCH_URL is not set — Elasticsearch disabled (non-production mode)')
+    logger.warn('ELASTICSEARCH_URL is not set — Elasticsearch disabled (fallback to TMDB)')
     return
   }
 
@@ -115,14 +111,7 @@ export async function connectElasticsearch(): Promise<void> {
   const finalMessage =
     lastError instanceof Error ? lastError.message : String(lastError)
 
-  if (config.nodeEnv === 'production') {
-    throw new Error(`Elasticsearch connection failed after ${MAX_RETRIES} attempts: ${finalMessage}`)
-  }
-
-  // Non-production: continue without ES (search will be degraded / disabled)
-  logger.warn(
-    `Elasticsearch unavailable after ${MAX_RETRIES} attempts — continuing without search (non-production)`
-  )
+  logger.warn(`Elasticsearch connection failed after ${MAX_RETRIES} attempts: ${finalMessage} — continuing without search (fallback to TMDB)`)
   esClient = null
 }
 
