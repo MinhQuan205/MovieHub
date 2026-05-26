@@ -325,6 +325,29 @@ export class ElasticsearchService {
   // ── Search ─────────────────────────────────────────────────
 
   /**
+   * Count indexed movie documents.
+   * Used during startup to decide whether the search index needs seeding.
+   */
+  async countMovies(): Promise<number> {
+    if (!isElasticsearchConnected()) {
+      logger.warn('ElasticsearchService.countMovies skipped - ES not connected')
+      return 0
+    }
+
+    const client = getElasticsearchClient()
+
+    try {
+      const response = await client.count({ index: MOVIES_INDEX })
+      return response.count
+    } catch (err) {
+      if (err instanceof EsErrors.ResponseError && err.statusCode === 404) {
+        return 0
+      }
+      handleEsError(err, `countMovies("${MOVIES_INDEX}")`)
+    }
+  }
+
+  /**
    * Full-text fuzzy search across title (^3), original_title (^2), overview (^1).
    * Optionally filter by genre IDs and vote_average range.
    *
