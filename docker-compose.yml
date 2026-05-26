@@ -12,7 +12,8 @@ services:
     environment:
       NODE_ENV: development
       PORT: 4000
-      MONGODB_URI: mongodb://mongo:27017/moviehub_dev
+      # Fix: trỏ sang MongoDB Atlas thay vì container local
+      MONGODB_URI: "mongodb+srv://moviehub_user:2UTjHLqsd0Opc94w@moviehub-cluster.zogf4z1.mongodb.net/moviehub?retryWrites=true&w=majority&appName=moviehub-cluster&authSource=admin"
       REDIS_URL: redis://redis:6379
       API_PREFIX: /api/v1
       CORS_ORIGIN: http://localhost:8081,http://localhost:19006
@@ -36,8 +37,6 @@ services:
       GOOGLE_CLIENT_SECRET: ""
       GOOGLE_CALLBACK_URL: ""
     depends_on:
-      mongo:
-        condition: service_healthy
       redis:
         condition: service_healthy
       elasticsearch:
@@ -48,20 +47,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
-
-  mongo:
-    image: mongo:7
-    container_name: moviehub-mongo
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
-    healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
 
   redis:
     image: redis:7-alpine
@@ -97,6 +82,5 @@ services:
       start_period: 40s
 
 volumes:
-  mongo_data:
   redis_data:
   elasticsearch_data:
