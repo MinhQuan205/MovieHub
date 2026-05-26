@@ -4,6 +4,8 @@ services:
     container_name: moviehub-backend
     working_dir: /app
     command: sh -c "npm install && npm run dev"
+    env_file:
+      - ./backend/.env
     ports:
       - "4000:4000"
     volumes:
@@ -27,9 +29,9 @@ services:
       JWT_REFRESH_SECRET: moviehub_refresh_secret_dev_123456
       JWT_ACCESS_EXPIRES: 15m
       JWT_REFRESH_EXPIRES: 7d
-      TMDB_API_KEY: ""
       TMDB_BASE_URL: https://api.themoviedb.org/3
       TMDB_IMAGE_BASE: https://image.tmdb.org/t/p
+      ELASTICSEARCH_URL: http://elasticsearch:9200
       GOOGLE_CLIENT_ID: ""
       GOOGLE_CLIENT_SECRET: ""
       GOOGLE_CALLBACK_URL: ""
@@ -37,6 +39,8 @@ services:
       mongo:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      elasticsearch:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:4000/api/v1/health >/dev/null || exit 1"]
@@ -74,6 +78,25 @@ services:
       retries: 5
       start_period: 5s
 
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
+    container_name: moviehub-elasticsearch
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
 volumes:
   mongo_data:
   redis_data:
+  elasticsearch_data:
