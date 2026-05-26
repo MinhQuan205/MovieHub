@@ -15,6 +15,7 @@ import {
   startCacheInvalidationWorker,
   stopCacheInvalidationWorker,
 } from './jobs/processors/cacheInvalidation.processor'
+import { bootstrapSearchIndex } from './services/search-index.bootstrap'
 
 let server: HttpServer | null = null
 let shuttingDown = false
@@ -88,6 +89,7 @@ async function bootstrap() {
   await connectDatabase()
   await connectRedis()
   await connectElasticsearch()
+  await bootstrapSearchIndex()
 
   // ── Firebase Admin SDK ──────────────────────────────────────────────────
   const firebaseApp = getFirebaseAdmin()
