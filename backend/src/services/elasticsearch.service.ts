@@ -106,7 +106,7 @@ function toDocument(movie: TMDBMovie): MovieDocument {
     overview:          movie.overview,
     poster_path:       movie.poster_path,
     backdrop_path:     movie.backdrop_path,
-    release_date:      movie.release_date,
+    release_date:      movie.release_date || null as any,
     vote_average:      movie.vote_average,
     vote_count:        movie.vote_count,
     popularity:        movie.popularity,
@@ -279,13 +279,8 @@ export class ElasticsearchService {
     const client = getElasticsearchClient()
 
     // Build the flat datasource array for helpers.bulk
-    // Each entry is the document; the helper derives the action from `_index` / `_id`.
-    const datasource = movies.map((m) => ({
-      ...toDocument(m),
-      // helpers.bulk reads _index and _id from the document
-      _index: MOVIES_INDEX,
-      _id: String(m.id),
-    }))
+    // We only pass the document body. Metadata like _id and _index goes to the action payload.
+    const datasource = movies.map(toDocument)
 
     let indexed = 0
     let failed = 0
@@ -293,9 +288,9 @@ export class ElasticsearchService {
     try {
       const result = await client.helpers.bulk<(typeof datasource)[number]>({
         datasource,
-        onDocument(_doc) {
-          // Tell the helper to perform an upsert (index) operation
-          return { index: { _index: MOVIES_INDEX } }
+        onDocument(doc) {
+          // Tell the helper to perform an upsert (index) operation with specific _id
+          return { index: { _index: MOVIES_INDEX, _id: String(doc.id) } }
         },
         onDrop(record) {
           failed++
