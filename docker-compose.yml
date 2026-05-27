@@ -4,6 +4,8 @@ services:
     container_name: moviehub-backend
     working_dir: /app
     command: sh -c "npm install && npm run dev"
+    env_file:
+      - ./backend/.env
     ports:
       - "4000:4000"
     volumes:
