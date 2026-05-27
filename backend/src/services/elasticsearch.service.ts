@@ -294,15 +294,22 @@ export class ElasticsearchService {
         },
         onDrop(record) {
           failed++
-          logger.warn('Bulk index: document dropped', {
-            id: record.document?.id,
-            error: record.error,
-          })
+          // Log full error details for first 3 failures to diagnose root cause
+          if (failed <= 3) {
+            logger.error('[BulkIndex] Document rejected by Elasticsearch', {
+              docId: record.document?.id,
+              docTitle: (record.document as any)?.title,
+              errorType: record.error?.type,
+              errorReason: record.error?.reason,
+              causedBy: (record.error as any)?.caused_by,
+            })
+          }
         },
       })
 
       indexed = result.successful
-      failed += result.failed
+      // Note: result.failed counts same docs as onDrop, so use only onDrop counter
+      failed = Math.max(failed, result.failed)
 
       logger.info('Bulk index completed', {
         total: movies.length,
