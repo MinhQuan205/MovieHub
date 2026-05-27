@@ -258,7 +258,7 @@ export class ElasticsearchService {
   // ── Bulk operations ────────────────────────────────────────
 
   /**
-   * Bulk-upsert an array of movies using the helpers.bulk utility.
+   * Bulk-upsert an array of movies using the raw client.bulk() API.
    * Returns stats about how many docs succeeded / failed.
    *
    * @param movies - Array of TMDBMovie objects to index
@@ -277,50 +277,62 @@ export class ElasticsearchService {
     }
 
     const client = getElasticsearchClient()
-
-    // Build the flat datasource array for helpers.bulk
-    // We only pass the document body. Metadata like _id and _index goes to the action payload.
-    const datasource = movies.map(toDocument)
-
     let indexed = 0
     let failed = 0
+    const BATCH_SIZE = 100
 
-    try {
-      const result = await client.helpers.bulk<(typeof datasource)[number]>({
-        datasource,
-        onDocument(doc) {
-          // Tell the helper to perform an upsert (index) operation with specific _id
-          return { index: { _index: MOVIES_INDEX, _id: String(doc.id) } }
-        },
-        onDrop(record) {
-          failed++
-          // Log full error details for first 3 failures to diagnose root cause
-          if (failed <= 3) {
-            logger.error('[BulkIndex] Document rejected by Elasticsearch', {
-              docId: record.document?.id,
-              docTitle: (record.document as any)?.title,
-              errorType: record.error?.type,
-              errorReason: record.error?.reason,
-              causedBy: (record.error as any)?.caused_by,
-            })
+    for (let i = 0; i < movies.length; i += BATCH_SIZE) {
+      const batch = movies.slice(i, i + BATCH_SIZE)
+
+      // Build raw bulk operations: [action, doc, action, doc, ...]
+      const operations = batch.flatMap((m) => {
+        const doc = toDocument(m)
+        return [
+          { index: { _index: MOVIES_INDEX, _id: String(m.id) } },
+          {
+            ...doc,
+            // Prevent empty string dates from causing ES MapperParsingException
+            release_date: doc.release_date || undefined,
+          },
+        ]
+      })
+
+      try {
+        const response = await client.bulk({ operations, refresh: false })
+
+        if (response.errors) {
+          let errorLogged = 0
+          for (const item of response.items) {
+            const op = item.index
+            if (op?.error) {
+              failed++
+              if (errorLogged < 5) {
+                errorLogged++
+                logger.error('[BulkIndex] ES rejected document', {
+                  docId: op._id,
+                  errorType: op.error.type,
+                  errorReason: op.error.reason,
+                  causedBy: (op.error as any).caused_by,
+                })
+              }
+            } else {
+              indexed++
+            }
           }
-        },
-      })
-
-      indexed = result.successful
-      // Note: result.failed counts same docs as onDrop, so use only onDrop counter
-      failed = Math.max(failed, result.failed)
-
-      logger.info('Bulk index completed', {
-        total: movies.length,
-        indexed,
-        failed,
-        duration: `${result.time}ms`,
-      })
-    } catch (err) {
-      handleEsError(err, 'bulkIndex')
+        } else {
+          indexed += batch.length
+        }
+      } catch (err) {
+        logger.error('[BulkIndex] Bulk request threw exception', {
+          batchStart: i,
+          batchSize: batch.length,
+          error: err instanceof Error ? err.message : String(err),
+        })
+        failed += batch.length
+      }
     }
 
+    logger.info('[BulkIndex] Completed', { total: movies.length, indexed, failed })
     return { indexed, failed }
   }
 
